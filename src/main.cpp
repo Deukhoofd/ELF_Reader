@@ -1,4 +1,5 @@
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -77,5 +78,12 @@ int main(int argc, char* argv[]) {
     json o;
     o["functions"] = functions;
 
-    std::cout << o << std::endl;
+    auto outFile = cfg.GetOutputFile();
+    if (outFile.empty()){
+        outFile = "exported_functions.json";
+    }
+
+    std::ofstream outfile (outFile);
+    outfile << o << std::endl;
+    outfile.close();
 }
