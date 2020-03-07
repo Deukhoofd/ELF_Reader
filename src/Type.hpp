@@ -18,22 +18,32 @@ public:
     Type() { _name = "void"; }
 
     Type(const File& file, Block* block) {
+        if (block->GetType() == TagType::DW_TAG_restrict_type) {
+            block = file.GetBlock(block->GetAtType());
+        }
+
         if (block->GetType() == TagType::DW_TAG_pointer_type) {
             _pointer = true;
-            auto underlyingBlock = file.GetBlock(block->GetAtType());
-            if (underlyingBlock->GetType() == TagType::DW_TAG_const_type) {
-                _const = true;
-                underlyingBlock = file.GetBlock(underlyingBlock->GetAtType());
+            if (block->GetAtType() != 0)
+            {
+                auto underlyingBlock = file.GetBlock(block->GetAtType());
+                if (underlyingBlock->GetType() == TagType::DW_TAG_const_type) {
+                    _const = true;
+                    if (underlyingBlock->GetAtType() != 0)
+                        underlyingBlock = file.GetBlock(underlyingBlock->GetAtType());
+                }
+                _underlying = new Type(file, underlyingBlock);
             }
-            _underlying = new Type(file, underlyingBlock);
             return;
         }
         if (block->GetType() == TagType::DW_TAG_const_type) {
-            block = file.GetBlock(block->GetAtType());
+            if (block->GetAtType() != 0)
+                block = file.GetBlock(block->GetAtType());
             _const = true;
         }
         while (block->GetType() == TagType::DW_TAG_typedef) {
-            block = file.GetBlock(block->GetAtType());
+            if (block->GetAtType() != 0)
+                block = file.GetBlock(block->GetAtType());
         }
         if (block->GetType() == TagType::DW_TAG_class_type) {
             _name = block->GetName();
@@ -75,6 +85,7 @@ public:
         if (_const) ss << "const ";
         if (!_name.empty()) ss << _name;
         else if (_underlying != nullptr) ss << _underlying->ToShortString();
+        else ss << "void";
         if (_pointer) ss << " *";
         return ss.str();
     }

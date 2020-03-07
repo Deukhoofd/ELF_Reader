@@ -11,7 +11,7 @@
 using json = nlohmann::json;
 
 Config ParseArgs(int argc, char* argv[]) {
-    std::string ns;
+    std::string ns = "";
     std::string of;
     std::vector<std::string> files;
     for (int i = 1; i < argc; i++) {
