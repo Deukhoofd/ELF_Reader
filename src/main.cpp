@@ -6,6 +6,7 @@
 #include "../extern/json.hpp"
 #include "Config.hpp"
 #include "DWARF/File.hpp"
+#include "Enum.hpp"
 #include "Function.hpp"
 using json = nlohmann::json;
 
@@ -46,6 +47,11 @@ void to_json(json& j, const Function& value) {
     j = json{{"name", value.GetName()}, {"returns", value.GetReturnType()}, {"parameters", value.GetParameters()}};
 }
 
+void to_json(json& j, const Enum& value) {
+    j = json{{"name", value.GetName()}, {"byteSize", value.GetByteSize()}, {"values", value.GetValues()}};
+}
+
+
 int main(int argc, char* argv[]) {
     auto cfg = ParseArgs(argc, argv);
     std::cout << "Namespace: " << cfg.GetNamespace() << std::endl;
@@ -56,34 +62,38 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<Function> functions;
+    std::vector<Enum> enums;
     for (const auto& v : cfg.GetFiles()) {
         auto file = File::Read(v, cfg.GetNamespace());
-        std::cout << "Found " << file.GetBlocks().size() << " blocks" << std::endl;
+        std::cout << "Found " << file.GetBlocks().size() << " blocks in file " << v << std::endl;
         for (auto kv : file.GetBlocks()) {
             auto block = kv.second;
-            if (!(block->GetLevel() == 1 && !block->GetName().empty() &&
+            if (block->GetLevel() == 1 && !block->GetName().empty() &&
                   block->GetType() == TagType::DW_TAG_subprogram && block->IsExternal() &&
-                  strncmp(block->GetName().c_str(), cfg.GetNamespace().c_str(), cfg.GetNamespace().size()) == 0))
-                continue;
-
-            auto function = Function(file, block);
-            std::cout << "Got function by name of " << function.GetName() << " with return type "
-                      << function.GetReturnType().ToPrettyString() << std::endl;
-            for (const auto& par : function.GetParameters()) {
-                std::cout << "\t - " << par.GetName() << " " << par.GetType().ToPrettyString() << std::endl;
+                  strncmp(block->GetName().c_str(), cfg.GetNamespace().c_str(), cfg.GetNamespace().size()) == 0){
+                auto function = Function(file, block);
+                functions.push_back(function);
             }
-            functions.push_back(function);
+            if (block->GetType() == TagType::DW_TAG_enumeration_type && !block->GetName().empty()){
+                auto enum_ = Enum(file, block);
+                enums.push_back(enum_);
+            }
         }
     }
+
+    std::cout << "Found " << functions.size() << " functions in " << cfg.GetFiles().size() << " file(s)" << std::endl;
+    std::cout << "Found " << enums.size() << " enums in " << cfg.GetFiles().size() << " file(s)" << std::endl;
+
     json o;
     o["functions"] = functions;
+    o["enums"] = enums;
 
     auto outFile = cfg.GetOutputFile();
     if (outFile.empty()){
-        outFile = "exported_functions.json";
+        outFile = "exported_data.json";
     }
-
     std::ofstream outfile (outFile);
     outfile << o << std::endl;
     outfile.close();
+    std::cout << "Wrote exported data to file " << outFile << std::endl;
 }

@@ -13,13 +13,13 @@ private:
     TagType _type;
     Block* _next = nullptr;
     std::string _name = "";
-    int _atType = 0;
+    uint32_t _atType = 0;
     bool _external = false;
+    uint8_t _byteSize = 0;
+    std::string _constValue;
 
     static std::regex _atKindMatcher;
     static std::regex _nameMatcher;
-    static std::regex _typeMatcher;
-    static std::regex _externalMatcher;
 
 public:
     Block(uint8_t level, TagType type);
@@ -29,8 +29,10 @@ public:
     inline constexpr TagType GetType() const { return _type; }
     inline constexpr Block* GetNext() const { return _next; }
     inline constexpr const std::string& GetName() const { return _name; }
-    inline constexpr int GetAtType() const { return _atType; }
+    inline constexpr uint32_t GetAtType() const { return _atType; }
     inline constexpr bool IsExternal() const { return _external; }
+    inline constexpr uint8_t GetByteSize() const { return _byteSize; }
+    inline constexpr const std::string& GetConstValue() const { return _constValue; }
 
     void SetNext(Block* next) { _next = next; }
 
@@ -48,6 +50,10 @@ public:
                 _atType = std::stoi(data.substr(3, data.size() - 4), nullptr, 16);
             } else if (kind == "DW_AT_external"_cnc) {
                 _external = *data.c_str() == '1';
+            } else if (kind == "DW_AT_byte_size"_cnc) {
+                _byteSize = std::stoi(data);
+            } else if (kind == "DW_AT_const_value"_cnc) {
+                _constValue = data;
             }
         }
     }
