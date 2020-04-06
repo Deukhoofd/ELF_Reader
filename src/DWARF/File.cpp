@@ -13,14 +13,20 @@ static Block* CreateBlock(uint8_t level, TagType type){
 }
 
 File File::Read(const std::string& file, const std::string& ns) {
+    File f;
+
+    std::stringstream getNameCommand;
+    getNameCommand << "basename " << file << " | sed 's/lib\\(.*\\)\\..*/\\1/' ";
+    redi::ipstream getName(getNameCommand.str(), redi::pstreams::pstdout);
+    std::getline(getName.out(), f._fileName);
+
     std::stringstream command;
     command << "readelf -wi " << file;
-    redi::ipstream exec(command.str(), redi::pstreams::pstdout);
+    redi::ipstream exec (command.str(), redi::pstreams::pstdout);
     std::string line;
     Block* currentBlock = nullptr;
     size_t lineNr = 0;
 
-    File f;
     while (std::getline(exec.out(), line)) {
         lineNr++;
         std::smatch match;

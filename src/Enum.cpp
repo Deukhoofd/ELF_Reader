@@ -1,6 +1,7 @@
 #include "Enum.hpp"
 Enum::Enum(const File& file, Block* block) {
     _name = block->GetName();
+    _fileName = file.GetFileName();
     _byteSize = block->GetByteSize();
 
     auto c = block->GetNext();

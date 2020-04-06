@@ -3,6 +3,7 @@
 
 Function::Function(const File& file, Block* block) {
     _name = block->GetName();
+    _fileName = file.GetFileName();
     _returnType = ((block->GetAtType() == 0) ? Type() : Type(file, file.GetBlock(block->GetAtType())));
 
     auto c= block->GetNext();

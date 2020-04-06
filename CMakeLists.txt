@@ -27,3 +27,7 @@ file(GLOB_RECURSE SRC_FILES "src/*.cpp" "src/*.hpp" "extern/*.hpp", "extern/*.h"
 add_executable(ELF_exporter ${SRC_FILES})
 
 target_link_libraries(ELF_exporter PUBLIC Arbutils)
+
+install(TARGETS ELF_exporter
+        CONFIGURATIONS Release
+        RUNTIME DESTINATION bin)

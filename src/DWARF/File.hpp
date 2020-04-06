@@ -5,6 +5,7 @@
 #include "../Config.hpp"
 #include "Block.hpp"
 class File {
+    std::string _fileName;
     std::map<uint32_t, Block*> _blocks;
 
 public:
@@ -18,9 +19,9 @@ public:
 
     const std::map<uint32_t, Block*>& GetBlocks() const { return _blocks; }
 
-    Block* GetBlock(uint32_t key) const {
-        return _blocks.at(key);
-    }
+    Block* GetBlock(uint32_t key) const { return _blocks.at(key); }
+
+    const std::string GetFileName() const { return _fileName; }
 };
 
 #endif // ELF_EXPORTER_FILE_HPP

@@ -18,6 +18,8 @@ public:
 
 class Function {
     std::string _name;
+    std::string _fileName;
+
     Type _returnType;
     std::vector<FunctionParameter> _parameters;
 
@@ -25,6 +27,7 @@ public:
     Function(const File& file, Block* block);
 
     const std::string& GetName() const { return _name; }
+    const std::string& GetFileName() const { return _fileName; }
     const Type& GetReturnType() const { return _returnType; }
     const std::vector<FunctionParameter>& GetParameters() const { return _parameters; }
 
