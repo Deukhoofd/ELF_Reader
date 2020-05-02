@@ -36,6 +36,9 @@ ENUM(TagType, uint8_t,
      DW_TAG_unspecified_parameters,
      DW_TAG_subroutine_type,
      DW_TAG_variable,
-     DW_TAG_lexical_block
+     DW_TAG_lexical_block,
+     DW_TAG_ptr_to_member_type,
+     DW_TAG_volatile_type,
+     DW_TAG_inlined_subroutine
 )
 #endif // ELF_EXPORTER_TAGTYPE_HPP
