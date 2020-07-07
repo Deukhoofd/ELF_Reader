@@ -1,7 +1,6 @@
 #ifndef ELF_EXPORTER_BLOCK_HPP
 #define ELF_EXPORTER_BLOCK_HPP
 
-#include <Arbutils/ConstString.hpp>
 #include <cstdint>
 #include <iostream>
 #include <regex>
@@ -36,24 +35,32 @@ public:
 
     void SetNext(Block* next) { _next = next; }
 
+    static uint32_t constexpr GetStringHash(char const* input) {
+        return *input ? static_cast<uint32_t>(*input) + 33 * GetStringHash(input + 1) : 5381;
+    };
+
     virtual void AddData(const std::string& str) {
         std::smatch match;
         if (std::regex_match(str, match, _atKindMatcher)) {
-            auto kind = Arbutils::CaseInsensitiveConstString::GetHash(match[1].str());
+            auto kind = GetStringHash(match[1].str().c_str());
             auto data = match[2].str();
-            if (kind == "DW_AT_name"_cnc) {
-                if (std::regex_match(data, match, _nameMatcher)) {
-                    _name = match[1].str();
-                    return;
-                }
-            } else if (kind == "DW_AT_type"_cnc) {
-                _atType = std::stoi(data.substr(3, data.size() - 4), nullptr, 16);
-            } else if (kind == "DW_AT_external"_cnc) {
-                _external = *data.c_str() == '1';
-            } else if (kind == "DW_AT_byte_size"_cnc) {
-                _byteSize = std::stoi(data);
-            } else if (kind == "DW_AT_const_value"_cnc) {
-                _constValue = data;
+
+            switch (kind){
+                case GetStringHash("DW_AT_name"):
+                    if (std::regex_match(data, match, _nameMatcher)) {
+                        _name = match[1].str();
+                        return;
+                    }
+                    break;
+                case GetStringHash("DW_AT_type"):
+                    _atType = std::stoi(data.substr(3, data.size() - 4), nullptr, 16);
+                    break;
+                case GetStringHash("DW_AT_external"):
+                    _external = *data.c_str() == '1';
+                    break;
+                case GetStringHash("DW_AT_const_value"):
+                    _constValue = data;
+                    break;
             }
         }
     }

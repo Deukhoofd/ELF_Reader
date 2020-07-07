@@ -1,10 +1,11 @@
 // PStreams - POSIX Process I/O for C++
 
-//        Copyright (C) 2001 - 2017 Jonathan Wakely
+//        Copyright (C) 2001 - 2020 Jonathan Wakely
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 //
+// SPDX-License-Identifier: BSL-1.0
 
 /**
  * @file pstream.h
@@ -43,7 +44,7 @@
 
 
 /// The library version.
-#define PSTREAMS_VERSION 0x0101   // 1.0.1
+#define PSTREAMS_VERSION 0x0103   // 1.0.3
 
 /**
  *  @namespace redi
@@ -82,6 +83,11 @@ namespace redi
   protected:
     enum { bufsz = 32 };  ///< Size of pstreambuf buffers.
     enum { pbsz  = 2 };   ///< Number of putback characters kept.
+
+#if __cplusplus >= 201103L
+    template<typename T>
+      using stringable = decltype((void)std::string(std::declval<const T&>()));
+#endif
   };
 
   /// Class template for stream buffer.
@@ -110,6 +116,12 @@ namespace redi
       basic_pstreambuf( const std::string& file,
                         const argv_type& argv,
                         pmode mode );
+
+#if __cplusplus >= 201103L
+      basic_pstreambuf(basic_pstreambuf&&) noexcept;
+      basic_pstreambuf& operator=(basic_pstreambuf&&) noexcept;
+      void swap(basic_pstreambuf&) noexcept;
+#endif
 
       /// Destructor.
       ~basic_pstreambuf();
@@ -242,8 +254,12 @@ namespace redi
       switch_read_buffer(buf_read_src);
 
     private:
+#if __cplusplus >= 201103L
+      using basic_streambuf = std::basic_streambuf<char_type, traits_type>;
+#else
       basic_pstreambuf(const basic_pstreambuf&);
       basic_pstreambuf& operator=(const basic_pstreambuf&);
+#endif
 
       void
       init_rbuffers();
@@ -268,6 +284,7 @@ namespace redi
     {
     protected:
       typedef basic_pstreambuf<CharT, Traits>       streambuf_type;
+      typedef std::basic_ios<CharT, Traits>         ios_type;
 
       typedef pstreams::pmode                       pmode;
       typedef pstreams::argv_type                   argv_type;
@@ -285,6 +302,31 @@ namespace redi
       virtual
       ~pstream_common() = 0;
 
+#if __cplusplus >= 201103L
+      pstream_common(pstream_common&& rhs) noexcept
+      : command_(std::move(rhs.command_))
+      , buf_(std::move(rhs.buf_))
+      {
+        /* derived class is responsible for ios_type::move(rhs) happening */
+      }
+
+      pstream_common&
+      operator=(pstream_common&& rhs) noexcept
+      {
+        command_ = std::move(rhs.command_);
+        buf_ = std::move(rhs.buf_);
+        return *this;
+      }
+
+      void
+      swap(pstream_common& rhs) noexcept
+      {
+        /* derived class is responsible for ios_type::swap(rhs) happening */
+        command_.swap(rhs.command_);
+        buf_.swap(rhs.buf_);
+      }
+#endif // C++11
+
       /// Start a process.
       void
       do_open(const std::string& cmd, pmode mode);
@@ -294,8 +336,9 @@ namespace redi
       do_open(const std::string& file, const argv_type& argv, pmode mode);
 
     public:
-      /// Close the pipe.
-      void
+      /// Close the pipe, returning the program's exit status, as
+      /// pclose(3) does.
+      int
       close();
 
       /// Report whether the stream's buffer has been initialised.
@@ -411,12 +454,32 @@ namespace redi
       { }
 
 #if __cplusplus >= 201103L
-      template<typename T>
+      template<typename T, typename = stringable<T>>
         explicit
         basic_ipstream(std::initializer_list<T> args, pmode mode = pstdout)
         : basic_ipstream(argv_type(args.begin(), args.end()), mode)
         { }
-#endif
+
+      basic_ipstream(basic_ipstream&& rhs)
+      : istream_type(std::move(rhs))
+      , pbase_type(std::move(rhs))
+      { istream_type::set_rdbuf(std::addressof(pbase_type::buf_)); }
+
+      basic_ipstream&
+      operator=(basic_ipstream&& rhs)
+      {
+        istream_type::operator=(std::move(rhs));
+        pbase_type::operator=(std::move(rhs));
+        return *this;
+      }
+
+      void
+      swap(basic_ipstream& rhs)
+      {
+        istream_type::swap(rhs);
+        pbase_type::swap(rhs);
+      }
+#endif // C++11
 
       /**
        * @brief Destructor.
@@ -570,12 +633,32 @@ namespace redi
        * @param mode  the I/O mode to use when opening the pipe.
        * @see   do_open(const std::string&, const argv_type&, pmode)
        */
-      template<typename T>
+      template<typename T, typename = stringable<T>>
         explicit
         basic_opstream(std::initializer_list<T> args, pmode mode = pstdin)
         : basic_opstream(argv_type(args.begin(), args.end()), mode)
         { }
-#endif
+
+      basic_opstream(basic_opstream&& rhs)
+      : ostream_type(std::move(rhs))
+      , pbase_type(std::move(rhs))
+      { ostream_type::set_rdbuf(std::addressof(pbase_type::buf_)); }
+
+      basic_opstream&
+      operator=(basic_opstream&& rhs)
+      {
+        ostream_type::operator=(std::move(rhs));
+        pbase_type::operator=(std::move(rhs));
+        return *this;
+      }
+
+      void
+      swap(basic_opstream& rhs)
+      {
+        ostream_type::swap(rhs);
+        pbase_type::swap(rhs);
+      }
+#endif // C++11
 
       /**
        * @brief Destructor
@@ -710,12 +793,32 @@ namespace redi
        * @param mode  the I/O mode to use when opening the pipe.
        * @see   do_open(const std::string&, const argv_type&, pmode)
        */
-      template<typename T>
+      template<typename T, typename = stringable<T>>
         explicit
         basic_pstream(std::initializer_list<T> l, pmode mode = pstdout|pstdin)
         : basic_pstream(argv_type(l.begin(), l.end()), mode)
         { }
-#endif
+
+      basic_pstream(basic_pstream&& rhs)
+      : iostream_type(std::move(rhs))
+      , pbase_type(std::move(rhs))
+      { iostream_type::set_rdbuf(std::addressof(pbase_type::buf_)); }
+
+      basic_pstream&
+      operator=(basic_pstream&& rhs)
+      {
+        iostream_type::operator=(std::move(rhs));
+        pbase_type::operator=(std::move(rhs));
+        return *this;
+      }
+
+      void
+      swap(basic_pstream& rhs)
+      {
+        iostream_type::swap(rhs);
+        pbase_type::swap(rhs);
+      }
+#endif // C++11
 
       /**
        * @brief Destructor
@@ -871,8 +974,8 @@ namespace redi
        */
       explicit
       basic_rpstream(const argv_type& argv, pmode mode = pstdout|pstdin)
-      : ostream_type(NULL), istream_type(NULL),
-        pbase_type(argv.at(0), argv, mode)
+      : ostream_type(NULL), istream_type(NULL)
+      , pbase_type(argv.at(0), argv, mode)
       { }
 
 #if __cplusplus >= 201103L
@@ -883,12 +986,36 @@ namespace redi
        * @param mode  the I/O mode to use when opening the pipe.
        * @see   do_open(const std::string&, const argv_type&, pmode)
        */
-      template<typename T>
+      template<typename T, typename = stringable<T>>
         explicit
         basic_rpstream(std::initializer_list<T> l, pmode mode = pstdout|pstdin)
         : basic_rpstream(argv_type(l.begin(), l.end()), mode)
         { }
+
+      // TODO: figure out how to move istream and ostream bases separately,
+      // but so the virtual basic_ios base is only modified once.
+#if 0
+      basic_rpstream(basic_rpstream&& rhs)
+      : iostream_type(std::move(rhs))
+      , pbase_type(std::move(rhs))
+      { iostream_type::set_rdbuf(std::addressof(pbase_type::buf_)); }
+
+      basic_rpstream&
+      operator=(basic_rpstream&& rhs)
+      {
+        iostream_type::operator=(std::move(rhs));
+        pbase_type::operator=(std::move(rhs));
+        return *this;
+      }
+
+      void
+      swap(basic_rpstream& rhs)
+      {
+        iostream_type::swap(rhs);
+        pbase_type::swap(rhs);
+      }
 #endif
+#endif // C++11
 
       /// Destructor
       ~basic_rpstream() { }
@@ -1003,12 +1130,14 @@ namespace redi
     basic_pstreambuf<C,T>::basic_pstreambuf()
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
-    , wbuffer_(NULL)
+    , wbuffer_()
+    , rbuffer_()
+    , rbufstate_()
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
     {
-      init_rbuffers();
+      rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
     }
 
   /**
@@ -1024,12 +1153,14 @@ namespace redi
     basic_pstreambuf<C,T>::basic_pstreambuf(const std::string& cmd, pmode mode)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
-    , wbuffer_(NULL)
+    , wbuffer_()
+    , rbuffer_()
+    , rbufstate_()
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
     {
-      init_rbuffers();
+      rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
       open(cmd, mode);
     }
 
@@ -1049,12 +1180,14 @@ namespace redi
                                              pmode mode )
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
-    , wbuffer_(NULL)
+    , wbuffer_()
+    , rbuffer_()
+    , rbufstate_()
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
     {
-      init_rbuffers();
+      rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
       open(file, argv, mode);
     }
 
@@ -1068,6 +1201,64 @@ namespace redi
     {
       close();
     }
+
+#if __cplusplus >= 201103L
+  /**
+   * Move constructor.
+   */
+  template <typename C, typename T>
+    inline
+    basic_pstreambuf<C,T>::basic_pstreambuf( basic_pstreambuf&& rhs ) noexcept
+    : basic_streambuf(static_cast<const basic_streambuf&>(rhs))
+    , ppid_(rhs.ppid_)
+    , wpipe_(rhs.wpipe_)
+    , rpipe_{rhs.rpipe_[0], rhs.rpipe_[1]}
+    , wbuffer_(rhs.wbuffer_)
+    , rbuffer_{rhs.rbuffer_[0], rhs.rbuffer_[1]}
+    , rbufstate_{rhs.rbufstate_[0], rhs.rbufstate_[1], rhs.rbufstate_[2]}
+    , rsrc_(rhs.rsrc_)
+    , status_(rhs.status_)
+    , error_(rhs.error_)
+    {
+      rhs.ppid_ = -1;
+      rhs.wpipe_ = -1;
+      rhs.rpipe_[0] = rhs.rpipe_[1] = -1;
+      rhs.wbuffer_ = nullptr;
+      rhs.rbuffer_[0] = rhs.rbuffer_[1] = nullptr;
+      rhs.rbufstate_[0] = rhs.rbufstate_[1] = rhs.rbufstate_[2] = nullptr;
+      rhs.rsrc_ = rsrc_out;
+      rhs.status_ = -1;
+      rhs.error_ = 0;
+      rhs.setg(nullptr, nullptr, nullptr);
+      rhs.setp(nullptr, nullptr);
+    }
+
+  template <typename C, typename T>
+    inline basic_pstreambuf<C,T>&
+    basic_pstreambuf<C,T>::operator=( basic_pstreambuf&& rhs ) noexcept
+    {
+      close();
+      basic_streambuf::operator=(static_cast<const basic_streambuf&>(rhs));
+      swap(rhs);
+      return *this;
+    }
+
+  template <typename C, typename T>
+    inline void
+    basic_pstreambuf<C,T>::swap( basic_pstreambuf& rhs ) noexcept
+    {
+      basic_streambuf::swap(static_cast<basic_streambuf&>(rhs));
+      std::swap(ppid_, rhs.ppid_);
+      std::swap(wpipe_, rhs.wpipe_);
+      std::swap(rpipe_, rhs.rpipe_);
+      std::swap(wbuffer_, rhs.wbuffer_);
+      std::swap(rbuffer_, rhs.rbuffer_);
+      std::swap(rbufstate_, rhs.rbufstate_);
+      std::swap(rsrc_, rhs.rsrc_);
+      std::swap(status_, rhs.status_);
+      std::swap(error_, rhs.error_);
+    }
+#endif // C++11
 
   /**
    * Starts a new process by passing @a command to the shell (/bin/sh)
@@ -1447,9 +1638,15 @@ namespace redi
     }
 
   /**
-   *  Called on construction to initialise the arrays used for reading.
+   *  Used to be called on construction to initialise the arrays for reading.
+   *  No longer used.
    */
   template <typename C, typename T>
+#if __cplusplus >= 201402L && __has_cpp_attribute(deprecated)
+    [[deprecated]]
+#elif __GNUC__
+    __attribute__((deprecated))
+#endif
     inline void
     basic_pstreambuf<C,T>::init_rbuffers()
     {
@@ -1900,7 +2097,7 @@ namespace redi
             ::fcntl(rpipe(), F_SETFL, flags | O_NONBLOCK);  // set non-blocking
 
           error_ = 0;
-          rc = read(rbuf + pbsz, bufsz - pbsz);
+          rc = read(rbuf + pbsz, (uint32_t)bufsz - (uint32_t)pbsz);
 
           if (rc == -1 && error_ == EAGAIN)  // nothing available
             rc = 0;
@@ -1912,7 +2109,7 @@ namespace redi
         }
       }
       else
-        rc = read(rbuf + pbsz, bufsz - pbsz);
+        rc = read(rbuf + pbsz, (uint32_t)bufsz - (uint32_t)pbsz);
 
       if (rc > 0 || (rc == 0 && non_blocking))
       {
@@ -2121,13 +2318,15 @@ namespace redi
         this->setstate(std::ios_base::failbit);
     }
 
-  /** Calls rdbuf->close() and sets @c failbit on error. */
+  /** Calls rdbuf->close() and sets @c failbit on error.  Returns
+   *  process's exit status, as pclose(3) does. */
   template <typename C, typename T>
-    inline void
+    inline int
     pstream_common<C,T>::close()
     {
       if (!buf_.close())
         this->setstate(std::ios_base::failbit);
+      return buf_.status();
     }
 
   /**
