@@ -11,7 +11,8 @@ Function::Function(const File& file, Block* block) {
         if (c->GetLevel() == block->GetLevel())
             break;
         if (c->GetType() == TagType::DW_TAG_formal_parameter &&  c->GetLevel() == block->GetLevel() + 1){
-            _parameters.emplace_back(file, c);
+            auto parameter = FunctionParameter(file, c);
+            _parameters.push_back(parameter);
         }
         c = c->GetNext();
     }

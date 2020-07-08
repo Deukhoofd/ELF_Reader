@@ -55,6 +55,9 @@ public:
                 case GetStringHash("DW_AT_type"):
                     _atType = std::stoi(data.substr(3, data.size() - 4), nullptr, 16);
                     break;
+                case GetStringHash("DW_AT_byte_size"):
+                    _byteSize = std::stoi(data);
+                    break;
                 case GetStringHash("DW_AT_external"):
                     _external = *data.c_str() == '1';
                     break;
