@@ -21,7 +21,7 @@ public:
 
     Block* GetBlock(uint32_t key) const { return _blocks.at(key); }
 
-    const std::string GetFileName() const { return _fileName; }
+    inline const std::string& GetFileName() const { return _fileName; }
 };
 
 #endif // ELF_EXPORTER_FILE_HPP

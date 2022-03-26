@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
 
         for (auto kv : file.GetBlocks()) {
             auto block = kv.second;
-            if (block->GetLevel() == 1 && !block->GetName().empty() && block->GetType() == TagType::DW_TAG_subprogram &&
+            if (!block->GetName().empty() && block->GetType() == TagType::DW_TAG_subprogram &&
                 block->IsExternal() &&
                 strncmp(block->GetName().c_str(), cfg.GetNamespace().c_str(), cfg.GetNamespace().size()) == 0) {
                 auto function = Function(file, block);

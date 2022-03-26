@@ -16,7 +16,7 @@ File File::Read(const std::string& file, const std::string& ns) {
     File f;
 
     std::stringstream getNameCommand;
-    getNameCommand << "basename " << file << " | sed 's/lib\\(.*\\)\\..*/\\1/' ";
+    getNameCommand << "basename " << file << " | sed 's/\\(.*\\)\\..*/\\1/' ";
     redi::ipstream getName(getNameCommand.str(), redi::pstreams::pstdout);
     std::getline(getName.out(), f._fileName);
 
@@ -35,7 +35,7 @@ File File::Read(const std::string& file, const std::string& ns) {
             auto index = std::stoi(match[2].str(), nullptr, 16);
             TagType type;
             if (!TagTypeHelper::TryParse(match[3].str().c_str(), type)) {
-                throw std::logic_error("invalid tagtype " + match[3].str() + " at line " + std::to_string(lineNr) + "\n" + line);
+                continue;
             }
             auto block = CreateBlock(level, type);
             if (currentBlock != nullptr)

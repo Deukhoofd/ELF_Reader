@@ -149,9 +149,8 @@ public:
                 out = TagType::DW_TAG_inlined_subroutine;
                 return true;
             default:
-                std::stringstream err;
-                err << "Unknown DW_TAG: '" << s << "'.";
-                throw std::logic_error(err.str());
+                std::cout << "Unknown DW_TAG: '" << s << "'.";
+                return false;
         }
     }
 };

@@ -67,6 +67,9 @@ public:
         if (block->GetType() == TagType::DW_TAG_enumeration_type) {
             _name = block->GetName();
         }
+        if (block->GetType() == TagType::DW_TAG_structure_type) {
+            _name = block->GetName();
+        }
         if (block->GetType() == TagType::DW_TAG_subroutine_type) {
             _name = "Function";
         }
